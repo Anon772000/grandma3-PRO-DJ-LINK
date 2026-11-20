@@ -4,7 +4,13 @@
 
 Check the cable/link lights, addresses, subnet masks, player numbers and VLAN membership first. The console interface and decks must be able to exchange Pro DJ Link packets. In the confirmed installation, correcting the VLAN resolved the connection problem.
 
-Set **Listen IPv4** to `*` or the console's own DJ interface address. Ensure the plugin is in real-CDJ mode, with its listener started. Player IP addresses are discovered from packets, so entering a deck's IP as the listening address will not connect to it.
+In v1.1.0, select the correct DJ port in **Network → Network interface**. In **Manual / Advanced**, set **Listen IPv4** to `*` or the console's own DJ interface address. Ensure the plugin is in real-CDJ mode, with its listener started. Player IP addresses are discovered from packets, so entering a deck's IP as the listening address will not connect to it.
+
+## Interface dropdown is empty or unavailable
+
+Tap **Refresh**, check the port has a cable/link and an IPv4 address in **Menu → Network → My Interfaces**, or use **Manual / Advanced**. If the interface IP is available but MA does not expose its MAC to the plugin, passive reception can still be selected, but observer announcements require a MAC; use the manual fields for that case.
+
+If a saved interface is missing or replaced, select the new local DJ port. An unambiguous DHCP address change on the same interface is refreshed when starting the listener. If it has several addresses and the saved one is gone, select the intended address again.
 
 ## Beats arrive but play/pause or master status is missing
 

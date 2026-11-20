@@ -1,4 +1,4 @@
--- grandMA3 PRO DJ LINK v1.0.0 | MIT License
+-- grandMA3 PRO DJ LINK v1.1.0 | MIT License
 local Core = (function()
 -- Pure protocol and timing engine. Zero-based protocol offsets, Lua strings are one-based.
 local Core = {}
@@ -193,18 +193,177 @@ end
 return Core
 
 end)()
--- Appended to the embedded pure timing engine by build-plugin.py.
+local Network = (function()
+-- Read the local MA interface collection. Never writes console network settings.
+local Network = {}
+
+function Network.ipv4(value)
+    if type(value) ~= 'string' or not value:match('^%d+%.%d+%.%d+%.%d+$') then return nil end
+    local bytes = {}
+    for part in value:gmatch('%d+') do
+        local n = tonumber(part)
+        if n > 255 then return nil end
+        bytes[#bytes + 1] = n
+    end
+    return bytes
+end
+
+local function addressNumber(value)
+    local bytes = Network.ipv4(value)
+    if not bytes then return nil end
+    local n = 0
+    for _, b in ipairs(bytes) do n = n * 256 + b end
+    return n
+end
+
+local function addressString(n)
+    return string.format('%d.%d.%d.%d', (n >> 24) & 255, (n >> 16) & 255,
+                         (n >> 8) & 255, n & 255)
+end
+
+function Network.broadcast(ip, mask)
+    local address, bits = addressNumber(ip), addressNumber(mask)
+    if not address or not bits then return nil, 'Missing or invalid IPv4 address/subnet mask' end
+    local inverse = 0xffffffff ~ bits
+    if bits == 0 or (inverse & (inverse + 1)) ~= 0 then return nil, 'Subnet mask is not contiguous' end
+    if inverse < 3 then return nil, 'A /31 or /32 network has no usable broadcast address' end
+    local prefix, remaining = 32, inverse
+    while remaining > 0 do prefix = prefix - 1; remaining = remaining >> 1 end
+    local network, broadcast = address & bits, address | inverse
+    if address == network or address == broadcast then return nil, 'IPv4 address is a subnet/broadcast address' end
+    return addressString(broadcast), prefix
+end
+
+function Network.mac(value)
+    if type(value) ~= 'string' then return nil end
+    local compact
+    if value:match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') or
+       value:match('^%x%x%-%x%x%-%x%x%-%x%x%-%x%x%-%x%x$') then
+        compact = value:gsub('[:%-]', '')
+    elseif #value == 12 and value:match('^%x+$') then compact = value end
+    if not compact or compact == '000000000000' then return nil end
+    -- An Ethernet interface has a unicast MAC, including locally administered ones.
+    if (tonumber(compact:sub(1, 2), 16) & 1) ~= 0 then return nil end
+    return (compact:lower():gsub('(%x%x)', '%1:'):sub(1, -2))
+end
+
+local function get(object, property)
+    local ok, value = pcall(function() return object[property] end)
+    if ok and value ~= nil then return value end
+    ok, value = pcall(function() return object:Get(property) end)
+    if ok then return value end
+end
+
+local function children(object)
+    local ok, value = pcall(function() return object:Children() end)
+    if ok and type(value) == 'table' then return value end
+    return nil
+end
+
+local function linkState(value)
+    if value == false or value == 0 then return false end
+    if value == true or value == 1 then return true end
+    local text = tostring(value):lower()
+    if text == 'no' or text == 'false' or text == 'down' then return false end
+    if text == 'yes' or text == 'true' or text == 'up' then return true end
+    return nil
+end
+
+function Network.list(rootFunction)
+    local ok, interfaces = pcall(function() return rootFunction().Interfaces end)
+    if not ok or not interfaces then return {}, 'MA interface list is unavailable; use Manual / Advanced.' end
+    local cards = children(interfaces)
+    if not cards then return {}, 'MA interface list could not be read; use Manual / Advanced.' end
+    local entries = {}
+    for _, card in ipairs(cards) do
+        local name = tostring(get(card, 'Name') or '')
+        -- imx6 is the console's internal interface, not an external DJ port.
+        if name ~= '' and not name:lower():find('imx6', 1, true) then
+            local mac = Network.mac(get(card, 'MAC')) or ''
+            local link = linkState(get(card, 'Link'))
+            local addresses = children(card) or {}
+            local found = false
+            for _, address in ipairs(addresses) do
+                local ip, mask = get(address, 'IP'), get(address, 'Mask')
+                local bytes = Network.ipv4(ip)
+                if bytes and bytes[1] > 0 and bytes[1] < 224 and bytes[1] ~= 127 then
+                    local broadcast, prefix = Network.broadcast(ip, mask)
+                    local entry = {name=name, mac=mac, ip=ip, mask=mask or '',
+                                   broadcast=broadcast, prefix=broadcast and prefix or nil, link=link}
+                    entry.problem = link == false and 'Link is down' or
+                                    (not broadcast and prefix or nil)
+                    entries[#entries + 1] = entry
+                    found = true
+                end
+            end
+            -- Keep disconnected external ports visible, but exclude loopback cards.
+            if not found and not name:lower():find('loopback', 1, true) and
+               not name:lower():match('^lo%d*$') then
+                entries[#entries + 1] = {name=name, mac=mac, ip='', mask='', link=link,
+                                         problem='No usable IPv4 address'}
+            end
+        end
+    end
+    return entries
+end
+
+function Network.selected(config)
+    return type(config.interfaceName) == 'string' and config.interfaceName ~= ''
+end
+
+function Network.configure(config, entry)
+    assert(entry and not entry.problem, entry and entry.problem or 'Select a network interface')
+    assert(entry.broadcast, 'Selected interface has no usable broadcast address')
+    assert(not config.observer or entry.mac ~= '', 'MAC unavailable for this interface; use Manual / Advanced')
+    config.interfaceName, config.interfaceMAC = entry.name, entry.mac
+    config.interfaceIP, config.interfaceMask = entry.ip, entry.mask
+    -- Broadcast destinations must be received on wildcard sockets. The status
+    -- socket and observer sender bind the selected IP; broadcasts are subnet-filtered.
+    config.bind, config.observerIP = '*', entry.ip
+    config.broadcast, config.mac = entry.broadcast, entry.mac
+    return config
+end
+
+function Network.resolve(config, rootFunction)
+    local entries, reason = Network.list(rootFunction)
+    local candidates, exact = {}, nil
+    for _, entry in ipairs(entries) do
+        local identity = entry.name == config.interfaceName and
+                         (config.interfaceMAC == '' or entry.mac == config.interfaceMAC)
+        if identity then
+            candidates[#candidates + 1] = entry
+            if entry.ip == config.interfaceIP then exact = entry end
+        end
+    end
+    local entry = exact or (#candidates == 1 and candidates[1])
+    assert(entry, reason or ('Interface '..config.interfaceName..' is unavailable or its addresses changed; reselect it in Network'))
+    for _, other in ipairs(entries) do
+        assert(other == entry or other.ip ~= entry.ip or
+               (other.name == entry.name and other.mac == entry.mac),
+               'Selected IP is assigned to multiple interfaces; correct the network configuration')
+    end
+    return Network.configure(config, entry)
+end
+
+function Network.accepts(config, sourceIP)
+    if not Network.selected(config) then return true end
+    local source, address, mask = addressNumber(sourceIP), addressNumber(config.observerIP), addressNumber(config.interfaceMask)
+    return source ~= nil and address ~= nil and mask ~= nil and (source & mask) == (address & mask)
+end
+
+return Network
+
+end)()
+-- Appended to the embedded timing/network helpers by tools/build-release.py.
 local pluginName,componentName,signals,componentHandle=...
 signals=signals or {}
-local VERSION='1.0.0'
+local VERSION='1.1.0'
 local defaults={player=1,sync='FastSync',every=1,timeout=5,input='Live',bind='*',observer=false,
     observerIP='',broadcast='',mac='',observerID=7,
+    interfaceName='',interfaceMAC='',interfaceIP='',interfaceMask='',
     song={master='3.1',ratio=1,enabled=true},bump={master='3.3',ratio=1,enabled=true}}
 local function copy(t) local n={}; for k,v in pairs(t) do n[k]=type(v)=='table' and copy(v) or v end; return n end
-local function ipv4(s)
-    local a={}; for n in tostring(s):gmatch('[^.]+') do local v=tonumber(n); if not v or v%1~=0 or v<0 or v>255 then return nil end; a[#a+1]=v end
-    return #a==4 and a or nil
-end
+local ipv4=Network.ipv4
 local function macBytes(s)
     if not tostring(s):match('^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$') then return nil end
     local a={}; for n in s:gmatch('%x%x') do a[#a+1]=tonumber(n,16) end; return a
@@ -220,7 +379,7 @@ local function loadConfig()
     c.player=tonumber(pref('player') or '') or c.player
     c.every=tonumber(pref('every') or '') or c.every
     c.timeout=tonumber(pref('timeout') or '') or c.timeout
-    for _,k in ipairs({'sync','bind','observerIP','broadcast','mac'}) do c[k]=pref(k) or c[k] end
+    for _,k in ipairs({'sync','bind','observerIP','broadcast','mac','interfaceName','interfaceMAC','interfaceIP','interfaceMask'}) do c[k]=pref(k) or c[k] end
     c.observer=tonumber(pref('observer') or '0')==1
     for _,k in ipairs({'song','bump'}) do
         c[k].master=pref(k..'Master') or c[k].master
@@ -249,7 +408,7 @@ local function validate(c)
     end
 end
 local function saveConfig(c)
-    for _,k in ipairs({'player','sync','every','timeout','bind','observerIP','broadcast','mac'}) do SetVar(prefs,k,c[k]) end
+    for _,k in ipairs({'player','sync','every','timeout','bind','observerIP','broadcast','mac','interfaceName','interfaceMAC','interfaceIP','interfaceMask'}) do SetVar(prefs,k,c[k]) end
     SetVar(prefs,'observer',c.observer and 1 or 0)
     for _,k in ipairs({'song','bump'}) do
         SetVar(prefs,k..'Master',c[k].master); SetVar(prefs,k..'Ratio',c[k].ratio)
@@ -308,7 +467,7 @@ local function poll()
         for n=1,32 do
             local data,ip=s.sockets[port]:receivefrom()
             if not data then if ip~='timeout' then error('UDP '..port..': '..tostring(ip)) end; break end
-            s.engine:ingest(data,port,ip,t)
+            if s.cfg.input=='Test' or Network.accepts(s.cfg,ip) then s.engine:ingest(data,port,ip,t) end
         end
     end
     local latest={}
@@ -316,7 +475,7 @@ local function poll()
         local data,ip=s.sockets[50001]:receivefrom()
         if not data then if ip~='timeout' then error('UDP 50001: '..tostring(ip)) end; break end
         local p=Core.parse(data,50001)
-        if p then
+        if p and (s.cfg.input=='Test' or Network.accepts(s.cfg,ip)) then
             local key=ip..'/'..p.id
             if latest[key] then s.drops=s.drops+1 end
             latest[key]={data=data,ip=ip}
@@ -340,16 +499,20 @@ end
 function s.start(mode)
     s.stop(); s.cfg.input=mode or s.cfg.input; s.error=''; s.drops=0; s.lastPoll=nil; s.nextAnnounce=0
     local ok,err=pcall(function()
+        if s.cfg.input=='Live' and Network.selected(s.cfg) then Network.resolve(s.cfg,Root) end
         validate(s.cfg)
         local socket=require('socket'); local ctor=socket.udp4 or socket.udp
         for _,port in ipairs({50000,50001,50002}) do
             local sock=assert(ctor()); s.sockets[port]=sock; sock:settimeout(0)
-            local bound,why=sock:setsockname(s.cfg.input=='Test' and '127.0.0.1' or s.cfg.bind,port)
+            local bind=s.cfg.input=='Test' and '127.0.0.1' or
+                       (port==50002 and Network.selected(s.cfg) and s.cfg.observerIP or s.cfg.bind)
+            local bound,why=sock:setsockname(bind,port)
             assert(bound,'Cannot bind UDP '..port..': '..tostring(why))
         end
         s.sender=assert(ctor()); s.sender:settimeout(0)
-        if s.cfg.input=='Live' and s.cfg.observer then
-            assert(s.sender:setsockname(s.cfg.observerIP,0)); assert(s.sender:setoption('broadcast',true))
+        if s.cfg.input=='Live' and (Network.selected(s.cfg) or s.cfg.observer) then
+            assert(s.sender:setsockname(s.cfg.observerIP,0))
+            if s.cfg.observer then assert(s.sender:setoption('broadcast',true)) end
         end
         makeEngine(); s.running=true
         if s.cfg.input=='Test' then
@@ -357,6 +520,7 @@ function s.start(mode)
                    beat=1,counter=0,nextBeat=Time()+0.2,nextStatus=0,nextPresence=0}
         end
         schedule(s.generation)
+        if s.cfg.input=='Live' and Network.selected(s.cfg) then saveConfig(s.cfg) end
     end)
     if not ok then s.error=tostring(err); s.stop(); ErrPrintf('CDJ Link: '..s.error) end
     updateUI()
@@ -365,7 +529,8 @@ end
 function s.configure(c)
     validate(c); local mode=s.cfg.input; local wasRunning=s.running
     s.stop(); s.cfg=copy(c); s.cfg.input=mode; saveConfig(s.cfg); makeEngine()
-    if wasRunning then s.start(mode) end
+    if wasRunning then return s.start(mode) end
+    return true
 end
 function s.arm(value)
     if value and not s.running then return false,'Start the listener first' end
@@ -409,8 +574,14 @@ local function settings()
     local ok,err=pcall(s.configure,n)
     if not ok then MessageBox({title='Settings not applied',message=tostring(err),commands={{value=1,name='OK'}}}) end
 end
-local function networkSettings()
-    local c=s.cfg
+local function applyNetwork(c)
+    local ok,started,err=pcall(s.configure,c)
+    if not ok or not started then
+        MessageBox({title='Network settings',message=not ok and tostring(started) or
+                    ('Settings saved; listener could not restart: '..tostring(err)),commands={{value=1,name='OK'}}})
+    end
+end
+local function manualNetworkSettings(c)
     local r=MessageBox({title='CDJ Link - Network',message='Passive mode receives presence and beat broadcasts.\nExact play/pause and automatic master following need status packets.\nEnable observer announcements with the DJ interface IP, MAC and subnet broadcast. Observer uses device 7.\nNo track downloads, audio, or CDJ transport commands are sent.',
         commands={{value=1,name='Apply'},{value=0,name='Cancel'}},states={{name='Announce observer',state=c.observer}},
         inputs={{name='Listen IPv4 (* = all)',value=c.bind,order=1},{name='Observer interface IPv4',value=c.observerIP,order=2},
@@ -418,10 +589,46 @@ local function networkSettings()
                 {name='Disconnect seconds',value=tostring(c.timeout),order=5}}})
     if not r.success or r.result~=1 then return end
     local n=copy(c); n.bind=r.inputs['Listen IPv4 (* = all)']; n.observer=r.states['Announce observer']
+    n.interfaceName=''; n.interfaceMAC=''; n.interfaceIP=''; n.interfaceMask=''
     n.observerIP=r.inputs['Observer interface IPv4']; n.broadcast=r.inputs['Subnet broadcast IPv4']; n.mac=r.inputs['Interface MAC']
     n.timeout=tonumber(r.inputs['Disconnect seconds']) or -1
-    local ok,err=pcall(s.configure,n)
-    if not ok then MessageBox({title='Network settings not applied',message=tostring(err),commands={{value=1,name='OK'}}}) end
+    applyNetwork(n)
+end
+local function networkSettings()
+    while true do
+        local c=s.cfg
+        local entries,reason=Network.list(Root)
+        local values={['Manual / Advanced']=0}; local selected=0
+        for i,entry in ipairs(entries) do
+            local detail=entry.ip~='' and entry.ip..(entry.prefix and (' /'..entry.prefix) or '') or 'No IPv4'
+            local label=string.format('%d: %s - %s%s',i,entry.name,detail,entry.problem and ' (unavailable)' or '')
+            values[label]=i
+            if entry.name==c.interfaceName and entry.ip==c.interfaceIP and
+               (c.interfaceMAC=='' or entry.mac==c.interfaceMAC) then selected=i end
+        end
+        local current=Network.selected(c) and
+            string.format('\nCurrent: %s / %s\nMask: %s | Broadcast: %s\nMAC: %s',c.interfaceName,c.observerIP,c.interfaceMask,c.broadcast,c.mac) or ''
+        local r=MessageBox({title='PRO DJ LINK - Network Interface',
+            message='Choose the DJ interface to fill IP, MAC and broadcast automatically.\nEnable observer announcements for play/pause and tempo-master status.\nApply disarms output. Console network settings are not changed.'..current..(reason and ('\n'..reason) or ''),
+            commands={{value=1,name='Apply'},{value=2,name='Refresh'},{value=0,name='Cancel'}},
+            selectors={{name='Network interface',selectedValue=selected,values=values,type=0}},
+            inputs={{name='Disconnect seconds',value=tostring(c.timeout)}},
+            states={{name='Announce observer',state=c.observer}}})
+        if not r.success or r.result==0 then return end
+        if r.result==1 then
+            local index=r.selectors['Network interface']
+            local n=copy(c); n.observer=r.states['Announce observer']; n.timeout=tonumber(r.inputs['Disconnect seconds']) or -1
+            if index==0 then manualNetworkSettings(n); return end
+            local ok,err=pcall(function()
+                Network.configure(n,entries[index])
+                Network.resolve(n,Root) -- Recheck the live address after the selection dialog.
+                validate(n)
+            end)
+            if not ok then
+                MessageBox({title='Interface not applied',message=tostring(err),commands={{value=1,name='OK'}}})
+            else applyNetwork(n); return end
+        end
+    end
 end
 local function testSettings()
     if not s.sim then return end
@@ -509,8 +716,10 @@ local function dashboard(display)
     updateUI()
 end
 function s.show(display) dashboard(display) end
+function s.networkSettings() networkSettings() end
 local function main(display,argument)
     local action=tostring(argument or ''):lower()
+    if action=='network' then networkSettings(); return end
     if action=='stop' then s.stop(); return end
     if action=='test' then s.start('Test') elseif action=='start' then s.start('Live') elseif action=='arm' then s.arm(true) elseif action=='disarm' then s.arm(false) end
     if action~='arm' and action~='disarm' then
