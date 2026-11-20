@@ -1,6 +1,6 @@
 # Interface screenshots
 
-Actual grandMA3 captures from the original CDJ LINK build. The public release uses the **grandMA3 PRO DJ LINK** name; its controls are the same. The dashboard image is a **loopback Test CDJ**, separate from the maintainer's four-player hardware test report.
+Actual grandMA3 captures from the original CDJ LINK build. The public release uses the **grandMA3 PRO DJ LINK** name. These captures predate the v1.1 interface picker; the dashboard, sync settings and master routing shown remain current. The dashboard image is a **loopback Test CDJ**, separate from the maintainer's four-player hardware test report.
 
 ## Dashboard
 
@@ -20,11 +20,11 @@ Choose the source player or tempo master, sync mode, bar interval, enabled chann
 
 Select the destination speed masters used by your phasers. The defaults shown are Song 3.1 and Bump 3.3.
 
-## Network
+## Network — original manual form
 
 ![Network settings with listen address star, empty observer fields, five-second timeout and observer disabled](images/network-settings.png)
 
-The capture shows the default passive configuration. For detailed status and automatic master following, enter your own DJ interface IP, broadcast and MAC and enable observer announcements. See [network setup](network-setup.md).
+The capture shows v1.0.0's passive configuration. In v1.1.0-rc.1 this form is available under **Manual / Advanced**; the **Network** button now opens an interface dropdown first. A screenshot of that new picker has not yet been captured. See [network setup](network-setup.md).
 
 ## Taking more captures
 

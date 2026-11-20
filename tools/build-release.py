@@ -11,7 +11,7 @@ from io import BytesIO
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '1.0.0'
+VERSION = '1.1.0-rc.1'
 MA_VERSION = '2.4.2.2'
 NAME = 'grandMA3 PRO DJ LINK'
 ARCHIVE_NAME = f'grandma3-pro-dj-link-v{VERSION}.zip'
@@ -25,7 +25,7 @@ def read_source(path):
 def embed_plugin(name, code):
     tree = ET.Element('GMA3', DataVersion=MA_VERSION)
     plugin = ET.SubElement(tree, 'UserPlugin', Name=name,
-                           Author='Harrison (Anon772000)', Version=VERSION + '.0')
+                           Author='Harrison (Anon772000)', Version=VERSION.split('-')[0] + '.0')
     # No external FileName: import uses the embedded FileContent.
     component = ET.SubElement(plugin, 'ComponentLua', Name=name)
     chunks = [code[i:i + 1024] for i in range(0, len(code), 1024)]
@@ -47,6 +47,7 @@ def embed_plugin(name, code):
 def build_files():
     lua = ('-- ' + NAME + ' v' + VERSION + ' | MIT License\n'
            + 'local Core = (function()\n' + read_source('src/cdj-link-core.lua')
+           + '\nend)()\nlocal Network = (function()\n' + read_source('src/cdj-link-network.lua')
            + '\nend)()\n' + read_source('src/cdj-link-host.lua')).encode('utf-8')
     stop = read_source('src/cdj-stop-all.lua').encode('utf-8')
     artifacts = {
