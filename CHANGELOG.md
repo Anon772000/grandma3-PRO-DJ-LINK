@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0-alpha.2 — development
+
+- Added a separate Windows audio-backed test player with track selection, local audio output, seeking, amplitude waveforms, metadata, BPM estimation/manual grid, tap tempo and ±16% playback speed.
+- Sends unicast player presence, status, beats and precise positions, and serves read-only metadata/waveform requests. Supports loopback onPC or a selected adapter and console receiver IP. Network sending starts off.
+- Added **Connect PC player** and `Plugin 8 "simulator"` to configure loopback reception and track downloads with output disarmed. The known loopback simulator can supply metadata without observer announcements.
+- Added Windows packaging with an original generated 128 BPM demo, dependency notices and checksums. No vendor firmware or commercial tracks are bundled.
+- All 81 automated tests pass, including real UDP delivery and the actual Lua metadata client querying the simulator over TCP. The packaged Windows application was observed playing a local MP3 and feeding title, time and both waveforms to the native MA onPC 2.4.2.2 track display. Physical-console simulator operation and track display with real decks still require testing.
+
 ## 1.2.0-alpha.1 — development
 
 - Added a separate experimental Track view for CDJ-3000 title/artist, elapsed and remaining track time, progress, whole-track waveform and scrolling waveform detail.

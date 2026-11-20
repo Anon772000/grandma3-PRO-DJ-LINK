@@ -1,8 +1,14 @@
-# Experimental track display — v1.2.0-alpha.1
+# Experimental track display — v1.2.0-alpha.2
 
 The stable interface-dropdown release is [v1.1.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0). Track display is a separate development build. It has not been verified on a physical compact or with real decks yet.
 
+![Native grandMA3 onPC track display receiving title, time and both waveforms from the local standalone player, output disarmed](images/track-display-local-player.png)
+
+Observed on grandMA3 onPC 2.4.2.2 with the standalone Windows player sending a locally chosen MP3 over loopback. Both waveform views, title and elapsed/remaining time rendered, with metadata loaded and output disarmed. This is a simulator test, not a new real-deck hardware report.
+
 ## Try it
+
+For audio-backed testing without CDJs, use the [standalone Windows test player](standalone-player.md). **Track view → Connect PC player** selects Live loopback reception and enables metadata/waveforms with output disarmed. It also replaces any running built-in Test CDJ listener.
 
 1. Stop the previous listener. Import **grandma3-pro-dj-link-track-preview.xml** from the local MA library into an empty Plugin pool slot. Run one listener at a time.
 2. Open the plugin and choose **Track view**. **Test CDJ** on the main dashboard supplies a clearly labelled synthetic title, artist, 3-minute track and waveform. Cue buttons jump the simulated playhead by 15 seconds.
@@ -29,9 +35,9 @@ Streaming and non-rekordbox metadata depend on what the source player exposes. T
 
 ## Verification
 
-The original 48 regressions still pass. New checks exercise binary parsing, fragmented replies, omitted empty blobs, Unicode, malformed and oversized fields, source matching, stale positions, track changes, four-player query context, timeouts, socket cleanup, waveform bins and host beat/position coalescing. An independent Python TCP fixture supplies metadata, preview and detailed waveform data over real local sockets to the Lua client through a LuaSocket-compatible adapter. The native MA UI is checked structurally with mocked UI objects; its actual rendering and the console's LuaSocket TCP behaviour still require a native test.
+The original 48 regressions still pass. New checks exercise binary parsing, fragmented replies, omitted empty blobs, Unicode, malformed and oversized fields, source matching, stale positions, track changes, four-player query context, timeouts, socket cleanup, waveform bins and host beat/position coalescing. An independent Python TCP fixture supplies metadata, preview and detailed waveform data over real local sockets to the Lua client through a LuaSocket-compatible adapter. The native MA UI is also checked structurally with mocked UI objects.
 
-Windows Computer Use was unavailable during development (`Computer Use native pipe is unavailable`, OS error 2), so no native visual or physical-console success is claimed.
+All 81 current tests pass, including actual local UDP delivery, the Lua metadata client querying the standalone player's TCP server, transport/sample-rate conversion, track changes and port cleanup. The packaged Windows player and native MA onPC track rendering were observed working together. Physical-console simulator operation and track display with real CDJ metadata remain unverified.
 
 ## Protocol references
 

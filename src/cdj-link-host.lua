@@ -1,7 +1,7 @@
 -- Appended to the embedded timing/network helpers by tools/build-release.py.
 local pluginName,componentName,signals,componentHandle=...
 signals=signals or {}
-local VERSION='1.2.0-alpha.1'
+local VERSION='1.2.0-alpha.2'
 local defaults={player=1,sync='FastSync',every=1,timeout=5,input='Live',bind='*',observer=false,
     observerIP='',broadcast='',mac='',observerID=7,
     interfaceName='',interfaceMAC='',interfaceIP='',interfaceMask='',metadata=false,waveform=true,
@@ -265,6 +265,18 @@ local function applyNetwork(c)
                     ('Settings saved; listener could not restart: '..tostring(err)),commands={{value=1,name='OK'}}})
     end
 end
+local function connectPCPlayer()
+    local c=copy(s.cfg)
+    c.bind='127.0.0.1'; c.observer=false; c.observerIP=''; c.broadcast=''; c.mac=''
+    c.interfaceName=''; c.interfaceMAC=''; c.interfaceIP=''; c.interfaceMask=''
+    c.metadata=true; c.waveform=true
+    local ok,err=pcall(function()
+        s.stop(); s.cfg.input='Live'
+        assert(s.configure(c))
+        local started,why=s.start('Live'); assert(started,why)
+    end)
+    if not ok then MessageBox({title='PC player connection',message=tostring(err),commands={{value=1,name='OK'}}}) end
+end
 local function manualNetworkSettings(c)
     local r=MessageBox({title='CDJ Link - Network',message='Passive mode receives presence and beat broadcasts.\nExact play/pause and automatic master following need status packets.\nEnable observer announcements with the DJ interface IP, MAC and subnet broadcast. Observer uses device 7.\nNo track downloads, audio, or CDJ transport commands are sent.',
         commands={{value=1,name='Apply'},{value=0,name='Cancel'}},states={{name='Announce observer',state=c.observer}},
@@ -382,7 +394,7 @@ local function trackView(display)
         return bars
     end
     ui.preview=waveform(5); ui.wave=waveform(7)
-    local actions=frame:Append('UILayoutGrid'); actions.Anchors='0,9'; actions.Columns=4; actions.Rows=1
+    local actions=frame:Append('UILayoutGrid'); actions.Anchors='0,9'; actions.Columns=5; actions.Rows=1
     local function button(col,text,key,fn)
         local o=actions:Append('Button'); o.Anchors=col..',0'; o.Text=text; o.Font='Regular18'
         o.PluginComponent=componentHandle; o.Clicked=key; signals[key]=function() fn(); updateTrackUI() end
@@ -390,7 +402,8 @@ local function trackView(display)
     button(0,'Track settings','CDJTrackSettings',trackSettings)
     button(1,'Test: cue -15s','CDJTrackBack',function() if s.sim then s.sim.position=math.max(0,s.sim.position-15000) end end)
     button(2,'Test: cue +15s','CDJTrackForward',function() if s.sim then s.sim.position=math.min(s.sim.duration*1000,s.sim.position+15000) end end)
-    button(3,'Close','CDJTrackClose',function() if IsObjectValid(d) then d:Parent():Remove(d:Index()) end; s.trackUI=nil end)
+    button(3,'Connect PC player','CDJConnectPC',connectPCPlayer)
+    button(4,'Close','CDJTrackClose',function() if IsObjectValid(d) then d:Parent():Remove(d:Index()) end; s.trackUI=nil end)
     updateTrackUI()
 end
 updateTrackUI=function()
@@ -501,10 +514,12 @@ function s.show(display) dashboard(display) end
 function s.networkSettings() networkSettings() end
 function s.trackView(display) trackView(display) end
 function s.trackSettings() trackSettings() end
+function s.connectPCPlayer() connectPCPlayer() end
 local function main(display,argument)
     local action=tostring(argument or ''):lower()
     if action=='network' then networkSettings(); return end
     if action=='tracks' then trackView(display); return end
+    if action=='simulator' then connectPCPlayer(); trackView(display); return end
     if action=='stop' then s.stop(); return end
     if action=='test' then s.start('Test') elseif action=='start' then s.start('Live') elseif action=='arm' then s.arm(true) elseif action=='disarm' then s.arm(false) end
     if action~='arm' and action~='disarm' then

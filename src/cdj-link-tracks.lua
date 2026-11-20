@@ -266,7 +266,6 @@ function Tracks.new(options)
             return
         end
         if options.test or not options.enabled then return end
-        if not options.observer then self.status='Enable observer announcements for metadata'; return end
         for offset=1,6 do
             local id=(self.cursor+offset-1)%6+1; local p=engine.players[id]; local track=self.players[id]
             if track and not track.done and engine:connected(p,t) and p.mode~=0 and p.mode~=2 and
@@ -275,6 +274,8 @@ function Tracks.new(options)
                 local target=engine.players[track.source]
                 if not engine:connected(target,t) then
                     track.status='Waiting for source player'; self.nextTry[track.key]=t+1
+                elseif not options.observer and not (target.name=='CDJ-3000 SIM' and target.ip:match('^127%.')) then
+                    track.status='Enable observer announcements for metadata'; self.nextTry[track.key]=t+1
                 elseif not (target.name or ''):match('^CDJ%-3000') then
                     track.status='Metadata currently supports CDJ-3000 source players'; self.nextTry[track.key]=t+15
                 else

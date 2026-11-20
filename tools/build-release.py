@@ -11,7 +11,7 @@ from io import BytesIO
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '1.2.0-alpha.1'
+VERSION = '1.2.0-alpha.2'
 MA_VERSION = '2.4.2.2'
 NAME = 'grandMA3 PRO DJ LINK'
 ARCHIVE_NAME = f'grandma3-pro-dj-link-v{VERSION}.zip'

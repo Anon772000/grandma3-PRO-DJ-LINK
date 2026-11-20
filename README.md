@@ -1,6 +1,6 @@
 # grandMA3 PRO DJ LINK
 
-**Development branch: v1.2.0-alpha.1 track display.** The released version is [v1.1.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0). This branch adds experimental CDJ-3000 track title/artist, elapsed/remaining time, full-track waveform and scrolling detail. Native console/deck verification is pending. [Try the track preview](docs/track-display.md).
+**Development branch: v1.2.0-alpha.2 track display and standalone test player.** The released version is [v1.1.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0). This branch adds experimental CDJ-3000 track title/artist, elapsed/remaining time, full-track waveform and scrolling detail. The Windows player was observed supplying those views to native onPC 2.4.2.2; physical-console/real-deck verification is pending. [Try the track preview](docs/track-display.md) or [play your own audio with the Windows test player](docs/standalone-player.md).
 
 [![Release](https://img.shields.io/github/v/release/Anon772000/grandma3-PRO-DJ-LINK)](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/latest)
 [![Tests](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/actions/workflows/validate.yml/badge.svg)](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/actions/workflows/validate.yml)
@@ -70,6 +70,8 @@ Defaults are **Song → Master 3.1**, **Bump → Master 3.3**, both at ×1; fixe
 Closing the dashboard with **X leaves the listener running**. Use **Stop listener** to release the network sockets and disarm output. Opening the same plugin again shows its existing service. Run one copy of the listener.
 
 ## Test without decks
+
+The experimental branch includes a [standalone Windows test player](docs/standalone-player.md) that plays your own MP3/WAV/FLAC/OGG/AIFF files and sends timing, status, position, metadata and waveform data to the preview plugin. It supports local onPC testing or unicast to a console, with editable BPM/downbeat and tempo controls. No firmware is required. It is a separate optional test application.
 
 Tap **Test CDJ**. A synthetic player sends presence, status and beat datagrams through actual `127.0.0.1` UDP sockets into the same receiver. Use the dashboard controls to play/pause, adjust BPM, reset the bar, select a player/master or disconnect it.
 

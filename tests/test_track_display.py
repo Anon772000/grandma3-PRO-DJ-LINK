@@ -346,6 +346,19 @@ class TrackHostTests(unittest.TestCase):
     def setUp(self):
         network_tests.HostNetworkTests.setUp(self)
 
+    def test_pc_player_connects_live_loopback_and_disarms_output(self):
+        self.assertTrue(self.service.start('Test')[0])
+        self.service.arm(True)
+        self.service.connectPCPlayer()
+        self.assertTrue(self.service.running)
+        self.assertEqual(self.service.cfg.input, 'Live')
+        self.assertEqual(self.service.cfg.bind, '127.0.0.1')
+        self.assertFalse(self.service.cfg.observer)
+        self.assertTrue(self.service.cfg.metadata)
+        self.assertTrue(self.service.cfg.waveform)
+        self.assertFalse(self.service.engine.armed)
+        self.assertEqual(self.lua.globals().saved.bind, '127.0.0.1')
+
     def test_metadata_off_by_default_and_persisted_when_changed(self):
         self.assertFalse(self.service.cfg.metadata)
         self.service.cfg.metadata = True
