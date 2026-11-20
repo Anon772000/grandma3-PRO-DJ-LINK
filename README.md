@@ -14,6 +14,8 @@ Follow a CDJ's BPM and synchronize grandMA3 phasers on the musical downbeat usin
 
 *Actual grandMA3 dashboard capture in **Test mode**: simulated player A at 128 BPM, output disarmed. The capture shows the original CDJ LINK title; the public release is named grandMA3 PRO DJ LINK. This image is separate from the four-deck hardware test report above.*
 
+[View all interface screenshots: dashboard, sync settings, master routing and network →](docs/screenshots.md)
+
 ## What it does
 
 - Displays players A–F / CDJ numbers 1–6, their IP addresses, transport state, effective BPM, beat within the bar and tempo-master status.

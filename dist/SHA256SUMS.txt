@@ -1,5 +1,5 @@
 19416d169d0dc6f5001c00bd58b46a3aed49952c47b9648412a9737b3b63e12b  cdj-stop-all.lua
 6425218add867b2861768edebcb7d9c2e0e68e9eaecb4f80254081e120cf7fc6  cdj-stop-all.xml
-01b38eea7d41fb0e8ff04727464617923b24c8d1e206846ba5d4ea4b82dd567e  grandma3-pro-dj-link-v1.0.0.zip
+7b1c610dbb770a5b73869267f89e1a4138c70b33dadf6eb6a16b1458a2fd3245  grandma3-pro-dj-link-v1.0.0.zip
 095cfe1950c7a895639dcd2989080ecc24f80aaabdf029ae9f8bbbf22613e30a  grandma3-pro-dj-link.lua
 bcf2c9cc14a696246cf4ffca09522c006c62c05ea0ae660671bde7c91bbf28f9  grandma3-pro-dj-link.xml

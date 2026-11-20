@@ -8,6 +8,8 @@ Follow CDJ BPM and synchronize grandMA3 phasers on received musical downbeats, d
 
 *Actual dashboard screenshot from the original CDJ LINK build: loopback **Test mode**, simulated player A, output disarmed. The released plugin is branded grandMA3 PRO DJ LINK.*
 
+[View all four interface screenshots: dashboard, sync settings, master routing and network](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/blob/v1.0.0/docs/screenshots.md).
+
 ## Included
 
 - Native six-player dashboard with connection, transport, BPM, beat and master status.
