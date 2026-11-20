@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0-alpha.1 — development
+
+- Added a separate experimental Track view for CDJ-3000 title/artist, elapsed and remaining track time, progress, whole-track waveform and scrolling waveform detail.
+- Added nonblocking read-only dbserver queries, bounded responses, timeouts, retry backoff and cleanup. Metadata downloads default off. Observer announcements remain on device 7; CDJ-3000 query context uses the target source deck number.
+- Added precise-position reception without allowing position updates to replace pending beat packets. Stale positions and old metadata after track changes/reconnections are cleared.
+- Added synthetic track/waveform data and cue-jump controls in Test mode.
+- Added 19 checks, including an independent real-TCP metadata/waveform fixture; all 67 tests pass. Native rendering and real CDJ operation remain unverified.
+
 ## 1.1.0 — 2026-11-21
 
 Published the interface dropdown from v1.1.0-rc.1 as a regular release. Includes the native onPC dropdown screenshot in the documentation and USB package. All 48 automated tests pass; selected-interface traffic on the physical compact remains unverified. No musical timing changes.
