@@ -1,5 +1,7 @@
 # grandMA3 PRO DJ LINK
 
+**Development branch: v1.2.0-alpha.2 track display and standalone test player.** The released version is [v1.1.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0). This branch adds experimental CDJ-3000 track title/artist, elapsed/remaining time, full-track waveform and scrolling detail. The Windows player was observed supplying those views to native onPC 2.4.2.2; physical-console/real-deck verification is pending. [Try the track preview](docs/track-display.md) or [play your own audio with the Windows test player](docs/standalone-player.md).
+
 [![Release](https://img.shields.io/github/v/release/Anon772000/grandma3-PRO-DJ-LINK)](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/latest)
 [![Tests](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/actions/workflows/validate.yml/badge.svg)](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -69,6 +71,8 @@ Closing the dashboard with **X leaves the listener running**. Use **Stop listene
 
 ## Test without decks
 
+The experimental branch includes a [standalone Windows test player](docs/standalone-player.md) that plays your own MP3/WAV/FLAC/OGG/AIFF files and sends timing, status, position, metadata and waveform data to the preview plugin. It supports local onPC testing or unicast to a console, with editable BPM/downbeat and tempo controls. No firmware is required. It is a separate optional test application.
+
 Tap **Test CDJ**. A synthetic player sends presence, status and beat datagrams through actual `127.0.0.1` UDP sockets into the same receiver. Use the dashboard controls to play/pause, adjust BPM, reset the bar, select a player/master or disconnect it.
 
 Keep output disarmed to preview timing decisions. Test mode can drive the configured masters if you explicitly arm it. Switching back to real CDJs disarms output. Test packets are isolated from live input and are not broadcast onto the DJ network.
@@ -105,9 +109,9 @@ python -m unittest discover -s tests -v
 python tools/build-release.py --check
 ```
 
-`src/cdj-link-core.lua` is the packet and timing engine. `src/cdj-link-network.lua` reads MA's local interface collection and handles address selection. `src/cdj-link-host.lua` contains the native MA dashboard, UDP service, preferences and Test CDJ. `src/cdj-stop-all.lua` is the recovery helper. Builds are portable and do not write to an installed grandMA3 library.
+`src/cdj-link-core.lua` is the packet and timing engine. `src/cdj-link-network.lua` reads MA's local interface collection and handles address selection. `src/cdj-link-tracks.lua` handles precise positions, read-only metadata requests and waveform analysis. `src/cdj-link-host.lua` contains the native MA dashboard, UDP service, preferences and Test CDJ. `src/cdj-stop-all.lua` is the recovery helper. Builds are portable and do not write to an installed grandMA3 library.
 
-The **48 regression tests** cover the timing engine plus interface discovery, subnet calculations, DHCP changes, manual migration, cancelled/failed settings changes, subnet filtering and socket restart cleanup. Development of v1.0.0 also included native onPC FastSync/ReSync command checks and an independent loopback sender. The new picker has been exercised with Lua mocks and captured running onPC; selected-interface traffic on the compact is still pending. [Testing notes](docs/testing.md).
+The **67 regression tests** cover timing, network-interface selection and the experimental track display, including metadata and waveform transfer over real local TCP sockets. Development of v1.0.0 also included native onPC FastSync/ReSync command checks and an independent loopback sender. The interface picker has been exercised with Lua mocks and captured running onPC; selected-interface traffic and the track display on the compact are still pending. [Testing notes](docs/testing.md) · [Track-display verification](docs/track-display.md#verification).
 
 ## Licence and references
 

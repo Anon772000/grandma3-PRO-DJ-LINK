@@ -11,7 +11,7 @@ from io import BytesIO
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '1.1.0'
+VERSION = '1.2.0-alpha.2'
 MA_VERSION = '2.4.2.2'
 NAME = 'grandMA3 PRO DJ LINK'
 ARCHIVE_NAME = f'grandma3-pro-dj-link-v{VERSION}.zip'
@@ -48,6 +48,7 @@ def build_files():
     lua = ('-- ' + NAME + ' v' + VERSION + ' | MIT License\n'
            + 'local Core = (function()\n' + read_source('src/cdj-link-core.lua')
            + '\nend)()\nlocal Network = (function()\n' + read_source('src/cdj-link-network.lua')
+           + '\nend)()\nlocal Tracks = (function()\n' + read_source('src/cdj-link-tracks.lua')
            + '\nend)()\n' + read_source('src/cdj-link-host.lua')).encode('utf-8')
     stop = read_source('src/cdj-stop-all.lua').encode('utf-8')
     artifacts = {

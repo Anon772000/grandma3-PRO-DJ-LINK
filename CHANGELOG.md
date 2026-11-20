@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0-alpha.2 — development
+
+- Added a separate Windows audio-backed test player with track selection, local audio output, seeking, amplitude waveforms, metadata, BPM estimation/manual grid, tap tempo and ±16% playback speed.
+- Sends unicast player presence, status, beats and precise positions, and serves read-only metadata/waveform requests. Supports loopback onPC or a selected adapter and console receiver IP. Network sending starts off.
+- Added **Connect PC player** and `Plugin 8 "simulator"` to configure loopback reception and track downloads with output disarmed. The known loopback simulator can supply metadata without observer announcements.
+- Added Windows packaging with an original generated 128 BPM demo, dependency notices and checksums. No vendor firmware or commercial tracks are bundled.
+- All 81 automated tests pass, including real UDP delivery and the actual Lua metadata client querying the simulator over TCP. The packaged Windows application was observed playing a local MP3 and feeding title, time and both waveforms to the native MA onPC 2.4.2.2 track display. Physical-console simulator operation and track display with real decks still require testing.
+
+## 1.2.0-alpha.1 — development
+
+- Added a separate experimental Track view for CDJ-3000 title/artist, elapsed and remaining track time, progress, whole-track waveform and scrolling waveform detail.
+- Added nonblocking read-only dbserver queries, bounded responses, timeouts, retry backoff and cleanup. Metadata downloads default off. Observer announcements remain on device 7; CDJ-3000 query context uses the target source deck number.
+- Added precise-position reception without allowing position updates to replace pending beat packets. Stale positions and old metadata after track changes/reconnections are cleared.
+- Added synthetic track/waveform data and cue-jump controls in Test mode.
+- Added 19 checks, including an independent real-TCP metadata/waveform fixture; all 67 tests pass. Native rendering and real CDJ operation remain unverified.
+
 ## 1.1.0 — 2026-11-21
 
 Published the interface dropdown from v1.1.0-rc.1 as a regular release. Includes the native onPC dropdown screenshot in the documentation and USB package. All 48 automated tests pass; selected-interface traffic on the physical compact remains unverified. No musical timing changes.

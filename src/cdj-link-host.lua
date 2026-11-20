@@ -1,10 +1,10 @@
 -- Appended to the embedded timing/network helpers by tools/build-release.py.
 local pluginName,componentName,signals,componentHandle=...
 signals=signals or {}
-local VERSION='1.1.0'
+local VERSION='1.2.0-alpha.2'
 local defaults={player=1,sync='FastSync',every=1,timeout=5,input='Live',bind='*',observer=false,
     observerIP='',broadcast='',mac='',observerID=7,
-    interfaceName='',interfaceMAC='',interfaceIP='',interfaceMask='',
+    interfaceName='',interfaceMAC='',interfaceIP='',interfaceMask='',metadata=false,waveform=true,
     song={master='3.1',ratio=1,enabled=true},bump={master='3.3',ratio=1,enabled=true}}
 local function copy(t) local n={}; for k,v in pairs(t) do n[k]=type(v)=='table' and copy(v) or v end; return n end
 local ipv4=Network.ipv4
@@ -25,6 +25,8 @@ local function loadConfig()
     c.timeout=tonumber(pref('timeout') or '') or c.timeout
     for _,k in ipairs({'sync','bind','observerIP','broadcast','mac','interfaceName','interfaceMAC','interfaceIP','interfaceMask'}) do c[k]=pref(k) or c[k] end
     c.observer=tonumber(pref('observer') or '0')==1
+    c.metadata=tonumber(pref('metadata') or '0')==1
+    c.waveform=tonumber(pref('waveform') or '1')==1
     for _,k in ipairs({'song','bump'}) do
         c[k].master=pref(k..'Master') or c[k].master
         c[k].ratio=tonumber(pref(k..'Ratio') or '') or c[k].ratio
@@ -54,6 +56,7 @@ end
 local function saveConfig(c)
     for _,k in ipairs({'player','sync','every','timeout','bind','observerIP','broadcast','mac','interfaceName','interfaceMAC','interfaceIP','interfaceMask'}) do SetVar(prefs,k,c[k]) end
     SetVar(prefs,'observer',c.observer and 1 or 0)
+    SetVar(prefs,'metadata',c.metadata and 1 or 0); SetVar(prefs,'waveform',c.waveform and 1 or 0)
     for _,k in ipairs({'song','bump'}) do
         SetVar(prefs,k..'Master',c[k].master); SetVar(prefs,k..'Ratio',c[k].ratio)
         SetVar(prefs,k..'Enabled',c[k].enabled and 1 or 0)
@@ -74,12 +77,14 @@ local function makeEngine()
 end
 makeEngine()
 local updateUI
+local updateTrackUI=function() end
 local function closeSocket(sock) if sock then pcall(function()sock:close()end) end end
 function s.stop()
     s.running=false; s.generation=s.generation+1
     for _,sock in pairs(s.sockets) do closeSocket(sock) end
     s.sockets={}; closeSocket(s.sender); s.sender=nil; s.engine:arm(false)
     s.sim=nil
+    if s.tracks then s.tracks:stop() end
     if updateUI then updateUI() end
 end
 local function send(data,port,host)
@@ -93,6 +98,11 @@ local function simulate(t)
     if t>=v.nextStatus then
         v.counter=v.counter+1; send(Core.status(v.id,v.bpm,v.beat,v.playing,v.master,v.counter),50002); v.nextStatus=t+0.2
     end
+    if v.lastPosition then
+        if v.playing then v.position=(v.position+(t-v.lastPosition)*1000*v.bpm/128)%(v.duration*1000) end
+    end
+    v.lastPosition=t
+    send(Tracks.testPosition(v.id,v.position,v.duration),50001)
     if v.playing and t>=v.nextBeat then
         send(Core.beat(v.id,v.bpm,v.beat),50001)
         v.beat=v.beat%4+1; v.nextBeat=t+60/v.bpm -- never catch up a backlog of synthetic beats
@@ -111,15 +121,27 @@ local function poll()
         for n=1,32 do
             local data,ip=s.sockets[port]:receivefrom()
             if not data then if ip~='timeout' then error('UDP '..port..': '..tostring(ip)) end; break end
-            if s.cfg.input=='Test' or Network.accepts(s.cfg,ip) then s.engine:ingest(data,port,ip,t) end
+            if s.cfg.input=='Test' or Network.accepts(s.cfg,ip) then
+                if s.engine:ingest(data,port,ip,t) and port==50002 then
+                    local parsed=Core.parse(data,port); local player=s.engine.players[parsed.id]
+                    s.tracks:observe(player,t)
+                    if s.sim then
+                        local track=s.tracks.players[player.id]
+                        track.title='Test track - simulated waveform'; track.artist='PRO DJ LINK Test CDJ'
+                        track.preview=s.sim.preview; track.detail=s.sim.detail; track.status='SIMULATED track / no real audio'
+                    end
+                end
+            end
         end
     end
-    local latest={}
+    local latest,positions={},{}
     for n=1,64 do
         local data,ip=s.sockets[50001]:receivefrom()
         if not data then if ip~='timeout' then error('UDP 50001: '..tostring(ip)) end; break end
-        local p=Core.parse(data,50001)
-        if p and (s.cfg.input=='Test' or Network.accepts(s.cfg,ip)) then
+        local p=Core.parse(data,50001); local position=Tracks.position(data)
+        if position and (s.cfg.input=='Test' or Network.accepts(s.cfg,ip)) then
+            positions[ip..'/'..position.id]={value=position,ip=ip}
+        elseif p and (s.cfg.input=='Test' or Network.accepts(s.cfg,ip)) then
             local key=ip..'/'..p.id
             if latest[key] then s.drops=s.drops+1 end
             latest[key]={data=data,ip=ip}
@@ -129,6 +151,10 @@ local function poll()
     for _,p in pairs(latest) do
         if lag then s.drops=s.drops+1 else s.engine:ingest(p.data,50001,p.ip,t) end
     end
+    for _,p in pairs(positions) do s.tracks:position(p.value,p.ip,t,s.engine) end
+    -- A metadata failure is a display error; the beat service keeps running.
+    local trackOK,trackError=pcall(s.tracks.poll,s.tracks,t,s.engine)
+    if not trackOK then s.tracks:fail('Track data: '..tostring(trackError),t) end
     s.lastPoll=t
     if t-(s.lastUI or 0)>0.15 then updateUI(); s.lastUI=t end
 end
@@ -159,9 +185,15 @@ function s.start(mode)
             if s.cfg.observer then assert(s.sender:setoption('broadcast',true)) end
         end
         makeEngine(); s.running=true
+        s.tracks=Tracks.new({socket=socket,localIP=s.cfg.input=='Test' and '127.0.0.1' or s.cfg.observerIP,
+            enabled=s.cfg.metadata,waveform=s.cfg.waveform,observer=s.cfg.observer,test=s.cfg.input=='Test'})
         if s.cfg.input=='Test' then
             s.sim={id=s.cfg.player>0 and s.cfg.player or 1,bpm=128,playing=true,master=true,connected=true,
-                   beat=1,counter=0,nextBeat=Time()+0.2,nextStatus=0,nextPresence=0}
+                   beat=1,counter=0,nextBeat=Time()+0.2,nextStatus=0,nextPresence=0,position=0,duration=180}
+            local preview,detail={},{}
+            for i=1,400 do preview[i]=string.char(3+math.floor(25*math.abs(math.sin(i*0.083)*math.cos(i*0.021))))..'\5' end
+            for i=1,27000 do detail[i]=string.char(3+math.floor(28*math.abs(math.sin(i*0.029)*math.cos(i*0.0031)))) end
+            s.sim.preview=table.concat(preview); s.sim.detail=table.concat(detail)
         end
         schedule(s.generation)
         if s.cfg.input=='Live' and Network.selected(s.cfg) then saveConfig(s.cfg) end
@@ -185,6 +217,14 @@ function s.snapshot(path)
     f:write('running=',tostring(s.running),' input=',s.cfg.input,' armed=',tostring(s.engine.armed),' error=',s.error,'\n')
     f:write('packets=',s.engine.packets,' ignored=',s.engine.ignored,' duplicates=',s.engine.duplicates,' drops=',s.drops,' syncs=',s.engine.syncs,' previews=',s.engine.previews,'\n')
     for id,p in pairs(s.engine.players) do f:write('player=',id,' state=',s.engine:state(p,Time()),' bpm=',p.bpm or 0,' beat=',p.beat or 0,' master=',tostring(p.master),' ip=',p.ip,'\n') end
+    if s.tracks then
+        for id in pairs(s.tracks.players) do
+            local v=s.tracks:view(id,Time())
+            f:write('track=',id,' title=',v.title or '--',' artist=',v.artist or '--',' position=',v.position or -1,
+                    ' remaining=',v.remaining or -1,' preview=',v.preview and #v.preview or 0,
+                    ' detail=',v.detail and #v.detail or 0,' status=',v.status or '--','\n')
+        end
+    end
     for _,v in ipairs(s.engine.events) do f:write(string.format('%.6f | %s | player=%d beat=%d bpm=%.2f | %s\n',v.time,v.live and 'LIVE' or 'PREVIEW',v.player,v.beat,v.bpm,v.text)) end
     f:close()
 end
@@ -224,6 +264,18 @@ local function applyNetwork(c)
         MessageBox({title='Network settings',message=not ok and tostring(started) or
                     ('Settings saved; listener could not restart: '..tostring(err)),commands={{value=1,name='OK'}}})
     end
+end
+local function connectPCPlayer()
+    local c=copy(s.cfg)
+    c.bind='127.0.0.1'; c.observer=false; c.observerIP=''; c.broadcast=''; c.mac=''
+    c.interfaceName=''; c.interfaceMAC=''; c.interfaceIP=''; c.interfaceMask=''
+    c.metadata=true; c.waveform=true
+    local ok,err=pcall(function()
+        s.stop(); s.cfg.input='Live'
+        assert(s.configure(c))
+        local started,why=s.start('Live'); assert(started,why)
+    end)
+    if not ok then MessageBox({title='PC player connection',message=tostring(err),commands={{value=1,name='OK'}}}) end
 end
 local function manualNetworkSettings(c)
     local r=MessageBox({title='CDJ Link - Network',message='Passive mode receives presence and beat broadcasts.\nExact play/pause and automatic master following need status packets.\nEnable observer announcements with the DJ interface IP, MAC and subnet broadcast. Observer uses device 7.\nNo track downloads, audio, or CDJ transport commands are sent.',
@@ -293,7 +345,105 @@ local function role(p,t)
     if p.lastStatus and t-p.lastStatus<1.5 then return p.master and 'MASTER' or p.onAir and 'ON AIR' or 'PLAYER' end
     return 'Status unknown'
 end
+local function trackSettings()
+    local c=s.cfg
+    local r=MessageBox({title='PRO DJ LINK - Track display',
+        message='Track title and waveforms: experimental, CDJ-3000 source players only.\nEnable observer announcements and select the DJ network first.\nApplying settings disarms output. Time left is track time, not a promise of when the DJ will mix out.',
+        commands={{value=1,name='Apply'},{value=0,name='Cancel'}},
+        states={{name='Fetch track metadata',state=c.metadata},{name='Download waveforms',state=c.waveform}},
+        selectors={{name='Display player',selectedValue=s.trackPlayer or 0,type=0,
+            values={['Follow sync source']=0,A=1,B=2,C=3,D=4,E=5,F=6}}},
+        inputs={{name='Detail window seconds',value=tostring(s.trackSpan or 16)}}})
+    if not r.success or r.result~=1 then return end
+    local span=tonumber(r.inputs['Detail window seconds'])
+    if not span or span<4 or span>120 then
+        MessageBox({title='Track display',message='Detail window must be 4 to 120 seconds.',commands={{value=1,name='OK'}}}); return
+    end
+    local n=copy(c); n.metadata=r.states['Fetch track metadata']; n.waveform=r.states['Download waveforms']
+    s.trackPlayer=r.selectors['Display player']; s.trackSpan=span
+    applyNetwork(n)
+end
+local function trackView(display)
+    if s.trackUI and IsObjectValid(s.trackUI.dialog) then
+        local old=s.trackUI.dialog; old:Parent():Remove(old:Index())
+    end
+    local ui={}; s.trackUI=ui
+    local d=(display or GetFocusDisplay()).ScreenOverlay:Append('BaseInput')
+    ui.dialog=d; d.Name='PRO DJ LINK - Tracks'; d.W=1060; d.H=700; d.Columns=1; d.Rows=2; d.AutoClose=false
+    d[1][1].SizePolicy='Fixed'; d[1][1].Size='50'; d[1][2].SizePolicy='Fixed'; d[1][2].Size='650'
+    local title=d:Append('TitleBar'); title.Columns=2; title.Rows=1; title.Anchors='0,0'
+    title[2][2].SizePolicy='Fixed'; title[2][2].Size='50'
+    local text=title:Append('TitleButton'); text.Anchors='0,0'; text.Text='PRO DJ LINK / Track display - experimental'; text.Texture='corner1'
+    local x=title:Append('CloseButton'); x.Anchors='1,0'; x.Texture='corner2'
+    local frame=d:Append('DialogFrame'); frame.Anchors='0,1'; frame.Columns=1; frame.Rows=10
+    local heights={36,42,32,42,24,112,24,152,68,50}
+    for i,h in ipairs(heights) do frame[1][i].SizePolicy='Fixed'; frame[1][i].Size=tostring(h) end
+    local function label(index,font)
+        local o=frame:Append('UIObject'); o.Anchors='0,'..index; o.Font=font or 'Regular18'
+        o.BackColor='Global.Transparent'; o.Interactive=false; o.TextAutoAdjust=true; o.Text=''; return o
+    end
+    ui.source=label(0); ui.title=label(1,'Regular24'); ui.artist=label(2); ui.time=label(3,'Regular24')
+    ui.overview=label(4); ui.detail=label(6); ui.status=label(8)
+    local function waveform(index)
+        local grid=frame:Append('UILayoutGrid'); grid.Anchors='0,'..index; grid.Columns=96; grid.Rows=32
+        local bars={}
+        for col=1,96 do
+            local o=grid:Append('UIObject'); o.Anchors=(col-1)..',15,'..(col-1)..',16'
+            o.BackColor='Global.DisabledText'; o.Interactive=false; o.Text=''; bars[col]=o
+        end
+        return bars
+    end
+    ui.preview=waveform(5); ui.wave=waveform(7)
+    local actions=frame:Append('UILayoutGrid'); actions.Anchors='0,9'; actions.Columns=5; actions.Rows=1
+    local function button(col,text,key,fn)
+        local o=actions:Append('Button'); o.Anchors=col..',0'; o.Text=text; o.Font='Regular18'
+        o.PluginComponent=componentHandle; o.Clicked=key; signals[key]=function() fn(); updateTrackUI() end
+    end
+    button(0,'Track settings','CDJTrackSettings',trackSettings)
+    button(1,'Test: cue -15s','CDJTrackBack',function() if s.sim then s.sim.position=math.max(0,s.sim.position-15000) end end)
+    button(2,'Test: cue +15s','CDJTrackForward',function() if s.sim then s.sim.position=math.min(s.sim.duration*1000,s.sim.position+15000) end end)
+    button(3,'Connect PC player','CDJConnectPC',connectPCPlayer)
+    button(4,'Close','CDJTrackClose',function() if IsObjectValid(d) then d:Parent():Remove(d:Index()) end; s.trackUI=nil end)
+    updateTrackUI()
+end
+updateTrackUI=function()
+    local ui=s.trackUI; if not ui or not IsObjectValid(ui.dialog) then return end
+    local t=Time(); local p
+    if (s.trackPlayer or 0)>0 then p=s.engine.players[s.trackPlayer] else p=s.engine:selected(t) end
+    local connected=s.running and s.engine:connected(p,t)
+    local v=connected and p.mode~=nil and s.tracks and s.tracks:view(p.id,t) or {}
+    setText(ui.source,string.format('%s | %s | %s',s.cfg.input,s.engine.armed and 'OUTPUT ARMED' or 'MONITOR ONLY',
+        connected and ('Player '..string.char(64+p.id)..' / '..p.ip) or 'Waiting for selected player'))
+    setText(ui.title,v.title or (connected and 'Track title unavailable' or 'No connected player'))
+    setText(ui.artist,v.artist or '--')
+    setText(ui.time,'Elapsed '..Tracks.clock(v.position)..'     Remaining '..Tracks.clock(v.remaining)..'     Length '..Tracks.clock(v.duration and v.duration*1000))
+    setText(ui.overview,'Whole-track waveform / '..(v.test and 'SIMULATED' or 'downloaded analysis'))
+    local span=s.trackSpan or 16; local position=v.position and v.position/1000
+    local length=v.detail and #v.detail/150
+    local start=position and math.max(0,position-span/2) or 0
+    local finish=start+span
+    setText(ui.detail,string.format('Detail: %.0f-second window / %s',span,v.detail and '150 samples per track second' or 'unavailable'))
+    local function draw(bars,bins,head)
+        for col,o in ipairs(bars) do
+            local h=math.max(1,math.floor((bins[col] or 0)*15/31))
+            o.Anchors=(col-1)..','..(16-h)..','..(col-1)..','..(15+h)
+            o.BackColor=head and col==math.min(96,math.floor(head*96)+1) and 'Global.SuccessText' or
+                        (bins[col] and 'Global.Text' or 'Global.DisabledText')
+        end
+    end
+    draw(ui.preview,Tracks.bins(v.preview,96),v.fraction)
+    draw(ui.wave,length and Tracks.bins(v.detail,96,start/length,finish/length,true) or {},
+        position and (position-start)/span)
+    setText(ui.status,(v.status or 'Start the listener to receive track data')..'\n'..
+        (v.test and 'Test mode: synthetic title and waveform; no real audio.' or
+         (s.cfg.metadata and 'Experimental metadata / no CDJ transport commands.' or 'Metadata downloads are off. Enable in Track settings.')))
+end
 updateUI=function()
+    local ok,err=pcall(updateTrackUI)
+    if not ok and s.tracks then
+        s.tracks.status='Track display: '..tostring(err)
+        if s.lastTrackUIError~=tostring(err) then ErrPrintf(s.tracks.status); s.lastTrackUIError=tostring(err) end
+    end
     if not s.ui.dialog or not IsObjectValid(s.ui.dialog) then s.ui={}; return end
     local t=Time(); local e=s.engine; local selected=s.running and e:selected(t) or nil
     local output=e.armed and 'OUTPUT ARMED' or 'MONITOR ONLY'
@@ -342,13 +492,14 @@ local function dashboard(display)
         local o=parent:Append('Button'); o.Anchors=col..',0'; o.Text=text; o.Font='Regular18'; o.TextAutoAdjust=true; o.PluginComponent=componentHandle; o.Clicked=key
         signals[key]=guarded(fn); return o
     end
-    local actions=row(10,6)
+    local actions=row(10,7)
     s.ui.listen=button(actions,0,'Start listener','CDJListen',function() if s.running then s.stop() else s.start() end end)
     s.ui.arm=button(actions,1,'Arm output','CDJArm',function() s.arm(not s.engine.armed) end)
     button(actions,2,'Sync settings','CDJSettings',settings)
     button(actions,3,'Network','CDJNetwork',networkSettings)
     button(actions,4,'Sync next beat 1','CDJSync',function() s.engine.pending=true; s.engine.message='Sync queued for next received beat 1' end)
     s.ui.mode=button(actions,5,'Test CDJ','CDJMode',function() s.start(s.cfg.input=='Test' and 'Live' or 'Test') end)
+    button(actions,6,'Track view','CDJTracks',function() trackView(display) end)
     local test=row(11,6)
     s.ui.play=button(test,0,'Test: Play/Pause','CDJPlay',function() if s.sim then s.sim.playing=not s.sim.playing; s.sim.nextStatus=0; s.sim.nextBeat=Time()+0.1 end end)
     button(test,1,'Test BPM -1','CDJMinus',function() if s.sim then s.sim.bpm=math.max(20,s.sim.bpm-1) end end)
@@ -361,9 +512,14 @@ local function dashboard(display)
 end
 function s.show(display) dashboard(display) end
 function s.networkSettings() networkSettings() end
+function s.trackView(display) trackView(display) end
+function s.trackSettings() trackSettings() end
+function s.connectPCPlayer() connectPCPlayer() end
 local function main(display,argument)
     local action=tostring(argument or ''):lower()
     if action=='network' then networkSettings(); return end
+    if action=='tracks' then trackView(display); return end
+    if action=='simulator' then connectPCPlayer(); trackView(display); return end
     if action=='stop' then s.stop(); return end
     if action=='test' then s.start('Test') elseif action=='start' then s.start('Live') elseif action=='arm' then s.arm(true) elseif action=='disarm' then s.arm(false) end
     if action~='arm' and action~='disarm' then

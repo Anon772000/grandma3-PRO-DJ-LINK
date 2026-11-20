@@ -21,7 +21,8 @@ function Core.parse(data,port)
         local f,mode=data:byte(0x8a),data:byte(0x7c)
         p={kind='status',id=data:byte(0x22),name=name(data,0x0c),counter=u32(data,0xc8),
            master=flag(f,0x20),onAir=flag(f,8),playing=(mode==3 or mode==4 or mode==7 or mode==0x12),
-           mode=mode,beat=data:byte(0xa7)}
+           mode=mode,beat=data:byte(0xa7),source=data:byte(0x29),slot=data:byte(0x2a),
+           trackType=data:byte(0x2b),trackId=u32(data,0x2c)}
         local raw,pitch=u16(data,0x92),u32(data,0x8c)
         local bpm=raw/100*pitch/0x100000
         if raw~=0xffff and bpm>=20 and bpm<=300 then p.bpm=bpm end
@@ -104,6 +105,7 @@ function Core.new(cfg,env)
             if p.playing==false and v.playing then self.pending=true end
             p.counter=v.counter; p.lastStatus=t; p.playing=v.playing; p.master=v.master; p.onAir=v.onAir; p.mode=v.mode
             p.bpm=v.bpm or p.bpm
+            p.source=v.source; p.slot=v.slot; p.trackType=v.trackType; p.trackId=v.trackId
             if not p.lastBeat and v.beat>=1 and v.beat<=4 then p.beat=v.beat end
         elseif v.kind=='beat' then
             local period=60/v.bpm
