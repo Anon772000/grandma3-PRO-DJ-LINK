@@ -45,6 +45,8 @@ The build script verifies embedded XML round trips, ZIP contents and checksums. 
 
 ## Native onPC development checks
 
+For **v1.1.0-rc.1**, a [maintainer-supplied onPC screenshot](images/network-interface-dropdown.png) shows the native network dropdown expanded, multiple adapters enumerated, unavailable addresses marked, and the selected adapter's IP, mask, broadcast and MAC populated. The dashboard is in Test mode with a simulated player and output disarmed. This is visual evidence of native rendering and interface enumeration, not a test of live CDJ traffic through the selected interface. Verification on the physical compact is still pending.
+
 Development of **v1.0.0** on grandMA3 onPC 2.4.2.2 included UDP loopback reception, 128→130 BPM master readback, accepted native FastSync and ReSync commands on received beat 1, pause/disconnect gating and an independent Python sender exercising A→B master handoff at 128/132 BPM. The masters' original values were restored after those tests.
 
 These checks validate packet handling and accepted console commands. They do not measure physical fixture phase or end-to-end audio/light timing.

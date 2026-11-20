@@ -10,7 +10,11 @@ Follow a CDJ's BPM and synchronize grandMA3 phasers on the musical downbeat usin
 
 **[Stable v1.0.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.0.0)** · **[Try v1.1.0-rc.1: interface dropdown](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0-rc.1)** · [Network setup](docs/network-setup.md) · [Executor buttons](docs/executor-buttons.md)
 
-**v1.1.0-rc.1 adds a Network interface dropdown** with automatic IP, MAC and subnet broadcast details. Its automated tests pass; the new picker and interface properties still need a native check on the compact. Manual / Advanced settings remain available, and v1.0.0 remains the latest stable release.
+**v1.1.0-rc.1 adds a Network interface dropdown** with automatic IP, MAC and subnet broadcast details. Its automated tests pass, and the onPC capture below shows the native picker and populated interface details. Live traffic through the selected interface still needs verification on the compact. Manual / Advanced settings remain available, and v1.0.0 remains the latest stable release.
+
+![Native network interface dropdown listing adapters and showing the selected adapter's IP, mask, broadcast and MAC](docs/images/network-interface-dropdown.png)
+
+*Network interface picker on grandMA3 onPC, with the adapter list expanded. The dashboard behind it is in **Test mode / simulated player**, with output disarmed. The selected WSL adapter illustrates the address display; choose the interface connected to your DJ network.*
 
 ![Dashboard showing simulated player A at 128 BPM, playing as tempo master with output disarmed](docs/images/dashboard-test-mode.png)
 
@@ -103,7 +107,7 @@ python tools/build-release.py --check
 
 `src/cdj-link-core.lua` is the packet and timing engine. `src/cdj-link-network.lua` reads MA's local interface collection and handles address selection. `src/cdj-link-host.lua` contains the native MA dashboard, UDP service, preferences and Test CDJ. `src/cdj-stop-all.lua` is the recovery helper. Builds are portable and do not write to an installed grandMA3 library.
 
-The **48 regression tests** cover the timing engine plus interface discovery, subnet calculations, DHCP changes, manual migration, cancelled/failed settings changes, subnet filtering and socket restart cleanup. Development of v1.0.0 also included native onPC FastSync/ReSync command checks and an independent loopback sender. The new picker has been exercised with Lua mocks; its native console check is pending. [Testing notes](docs/testing.md).
+The **48 regression tests** cover the timing engine plus interface discovery, subnet calculations, DHCP changes, manual migration, cancelled/failed settings changes, subnet filtering and socket restart cleanup. Development of v1.0.0 also included native onPC FastSync/ReSync command checks and an independent loopback sender. The new picker has been exercised with Lua mocks and captured running onPC; selected-interface traffic on the compact is still pending. [Testing notes](docs/testing.md).
 
 ## Licence and references
 

@@ -1,6 +1,14 @@
 # Interface screenshots
 
-Actual grandMA3 captures from the original CDJ LINK build. The public release uses the **grandMA3 PRO DJ LINK** name. These captures predate the v1.1 interface picker; the dashboard, sync settings and master routing shown remain current. The dashboard image is a **loopback Test CDJ**, separate from the maintainer's four-player hardware test report.
+Actual grandMA3 captures supplied by the maintainer. The new interface picker uses the **PRO DJ LINK** title; older captures show the original CDJ LINK title. Dashboard player data shown here comes from a **loopback Test CDJ**, separate from the maintainer's four-player hardware test report.
+
+## Network interface dropdown
+
+![Native network interface picker with the adapter dropdown expanded and selected interface address details populated](images/network-interface-dropdown.png)
+
+The v1.1.0-rc.1 picker running on grandMA3 onPC lists adapters, marks unavailable addresses and displays the selected adapter's IP, subnet mask, calculated broadcast and MAC. The selected WSL adapter demonstrates the address display; choose the interface connected to your DJ network. **Manual / Advanced** opens the original network fields.
+
+The dashboard behind the dialog is in **Test mode / simulated player**, with output disarmed. This capture confirms the native picker and populated interface details; it does not verify live CDJ traffic through the selected adapter or operation on the physical compact.
 
 ## Dashboard
 
@@ -24,7 +32,7 @@ Select the destination speed masters used by your phasers. The defaults shown ar
 
 ![Network settings with listen address star, empty observer fields, five-second timeout and observer disabled](images/network-settings.png)
 
-The capture shows v1.0.0's passive configuration. In v1.1.0-rc.1 this form is available under **Manual / Advanced**; the **Network** button now opens an interface dropdown first. A screenshot of that new picker has not yet been captured. See [network setup](network-setup.md).
+The capture shows v1.0.0's passive configuration. In v1.1.0-rc.1 this form is available under **Manual / Advanced**; the **Network** button now opens the interface dropdown shown above. See [network setup](network-setup.md).
 
 ## Taking more captures
 
