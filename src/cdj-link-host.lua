@@ -1,7 +1,7 @@
 -- Appended to the embedded timing/network helpers by tools/build-release.py.
 local pluginName,componentName,signals,componentHandle=...
 signals=signals or {}
-local VERSION='1.1.0-rc.1'
+local VERSION='1.1.0'
 local defaults={player=1,sync='FastSync',every=1,timeout=5,input='Live',bind='*',observer=false,
     observerIP='',broadcast='',mac='',observerID=7,
     interfaceName='',interfaceMAC='',interfaceIP='',interfaceMask='',

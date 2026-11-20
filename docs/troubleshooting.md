@@ -4,7 +4,7 @@
 
 Check the cable/link lights, addresses, subnet masks, player numbers and VLAN membership first. The console interface and decks must be able to exchange Pro DJ Link packets. In the confirmed installation, correcting the VLAN resolved the connection problem.
 
-In v1.1.0-rc.1, select the correct DJ port in **Network → Network interface**. In **Manual / Advanced**, set **Listen IPv4** to `*` or the console's own DJ interface address. Ensure the plugin is in real-CDJ mode, with its listener started. Player IP addresses are discovered from packets, so entering a deck's IP as the listening address will not connect to it.
+In v1.1.0, select the correct DJ port in **Network → Network interface**. In **Manual / Advanced**, set **Listen IPv4** to `*` or the console's own DJ interface address. Ensure the plugin is in real-CDJ mode, with its listener started. Player IP addresses are discovered from packets, so entering a deck's IP as the listening address will not connect to it.
 
 ## Interface dropdown is empty or unavailable
 

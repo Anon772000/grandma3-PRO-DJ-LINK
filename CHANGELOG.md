@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 — 2026-11-21
+
+Published the interface dropdown from v1.1.0-rc.1 as a regular release. Includes the native onPC dropdown screenshot in the documentation and USB package. All 48 automated tests pass; selected-interface traffic on the physical compact remains unverified. No musical timing changes.
+
 ## 1.1.0-rc.1 — 2026-11-21
 
 Release candidate; native verification of the new interface picker on grandMA3 compact 2.4.2.2 is pending.

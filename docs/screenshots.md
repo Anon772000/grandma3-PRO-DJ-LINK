@@ -6,7 +6,7 @@ Actual grandMA3 captures supplied by the maintainer. The new interface picker us
 
 ![Native network interface picker with the adapter dropdown expanded and selected interface address details populated](images/network-interface-dropdown.png)
 
-The v1.1.0-rc.1 picker running on grandMA3 onPC lists adapters, marks unavailable addresses and displays the selected adapter's IP, subnet mask, calculated broadcast and MAC. The selected WSL adapter demonstrates the address display; choose the interface connected to your DJ network. **Manual / Advanced** opens the original network fields.
+The v1.1.0 picker running on grandMA3 onPC lists adapters, marks unavailable addresses and displays the selected adapter's IP, subnet mask, calculated broadcast and MAC. The selected WSL adapter demonstrates the address display; choose the interface connected to your DJ network. **Manual / Advanced** opens the original network fields.
 
 The dashboard behind the dialog is in **Test mode / simulated player**, with output disarmed. This capture confirms the native picker and populated interface details; it does not verify live CDJ traffic through the selected adapter or operation on the physical compact.
 
@@ -32,7 +32,7 @@ Select the destination speed masters used by your phasers. The defaults shown ar
 
 ![Network settings with listen address star, empty observer fields, five-second timeout and observer disabled](images/network-settings.png)
 
-The capture shows v1.0.0's passive configuration. In v1.1.0-rc.1 this form is available under **Manual / Advanced**; the **Network** button now opens the interface dropdown shown above. See [network setup](network-setup.md).
+The capture shows v1.0.0's passive configuration. In v1.1.0 this form is available under **Manual / Advanced**; the **Network** button now opens the interface dropdown shown above. See [network setup](network-setup.md).
 
 ## Taking more captures
 

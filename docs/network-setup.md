@@ -10,7 +10,7 @@ Keep the existing lighting-network interface configured for its lighting role. C
 
 ## Plugin fields
 
-### Interface dropdown — v1.1.0-rc.1
+### Interface dropdown — v1.1.0
 
 1. Open **Network** and select the interface connected to the CDJs. Console ports use names such as **Con1 / Con2 / Con3**; onPC shows the adapter names reported by MA. Each IPv4 address is a separate option.
 2. Enable **Announce observer** for detailed play/pause and tempo-master status.
@@ -23,7 +23,7 @@ The selected identity is saved with the show. On listener startup, the plugin re
 
 In automatic mode, discovery/beat sockets receive broadcasts and filter packets to the selected IPv4 subnet; detailed-status reception and observer announcements bind to the selected IP. This is not an operating-system-level device binding for broadcast packets. Keep multiple physical interfaces on distinct subnets to avoid routing ambiguity. The plugin refuses an IP duplicated on different interfaces.
 
-**Validation status:** the new dropdown and native property mapping have automated mock coverage; verification on the compact running 2.4.2.2 is pending. The four-deck hardware report applies to v1.0.0.
+**Validation status:** the dropdown and native property mapping have automated mock coverage and an onPC screenshot; verification on the compact running 2.4.2.2 is pending. The four-deck hardware report applies to v1.0.0.
 
 ### Manual / Advanced — also available in v1.0.0
 

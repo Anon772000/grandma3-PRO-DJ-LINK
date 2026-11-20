@@ -8,9 +8,9 @@ Follow a CDJ's BPM and synchronize grandMA3 phasers on the musical downbeat usin
 
 **v1.0.0 was tested on a grandMA3 compact running 2.4.2.2 with four CDJ-3000 players.** The maintainer reported that it **worked perfectly** after correcting a VLAN configuration issue. This is the confirmed hardware setup; other console versions and player models have not been verified.
 
-**[Stable v1.0.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.0.0)** · **[Try v1.1.0-rc.1: interface dropdown](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0-rc.1)** · [Network setup](docs/network-setup.md) · [Executor buttons](docs/executor-buttons.md)
+**[Download v1.1.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0)** · **[Previous v1.0.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.0.0)** · [Network setup](docs/network-setup.md) · [Executor buttons](docs/executor-buttons.md)
 
-**v1.1.0-rc.1 adds a Network interface dropdown** with automatic IP, MAC and subnet broadcast details. Its automated tests pass, and the onPC capture below shows the native picker and populated interface details. Live traffic through the selected interface still needs verification on the compact. Manual / Advanced settings remain available, and v1.0.0 remains the latest stable release.
+**v1.1.0 adds a Network interface dropdown** with automatic IP, MAC and subnet broadcast details. Its automated tests pass, and the onPC capture below shows the native picker and populated interface details. Live traffic through the selected interface still needs verification on the compact. Manual / Advanced settings remain available, and the original four-deck hardware report applies to v1.0.0.
 
 ![Native network interface dropdown listing adapters and showing the selected adapter's IP, mask, broadcast and MAC](docs/images/network-interface-dropdown.png)
 
@@ -36,7 +36,7 @@ The downbeat comes from the track's analysed CDJ beat grid. Beat 1 is a bar down
 
 ## Install
 
-1. Download **grandma3-pro-dj-link-v1.1.0-rc.1.zip** from the [release candidate](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0-rc.1), or use [stable v1.0.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.0.0) for the previous manual network form.
+1. Download **grandma3-pro-dj-link-v1.1.0.zip** from the [latest release](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.1.0), or use [stable v1.0.0](https://github.com/Anon772000/grandma3-PRO-DJ-LINK/releases/tag/v1.0.0) for the previous manual network form.
 2. Extract the ZIP and copy its **grandMA3** folder to the root of your USB drive. The plugin files will be in:
 
    ```text

@@ -45,7 +45,7 @@ These label/colour commands show the macro's last requested action. They are not
 | `Plugin 8 "start"` | Start real-CDJ reception and show the dashboard, disarmed. |
 | `Plugin 8 "stop"` | Stop reception and disarm output. |
 | `Plugin 8 "test"` | Start loopback Test mode and show the dashboard, disarmed. |
-| `Plugin 8 "network"` | Open the interface picker without starting a listener (v1.1.0-rc.1). |
+| `Plugin 8 "network"` | Open the interface picker without starting a listener (v1.1.0). |
 | `Plugin 8 "arm"` | Arm the running listener without opening the dashboard. |
 | `Plugin 8 "disarm"` | Disarm without stopping reception. |
 
